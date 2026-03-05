@@ -68,10 +68,9 @@ See [HELP.md](./help.md) for detailed manual setup instructions.
 
 ## Documentation
 
-- [README.md](./README.md) - This file (quick start)
-- [HELP.md](./help.md) - Comprehensive setup and deployment guide
-- [CI_CD_SETUP.md](./CI_CD_SETUP.md) - GitHub Actions automated deployment
-- [Frontend README](./frontend/README.md) - Frontend-specific details
+- **[HELP.md](./HELP.md)** - Detailed setup and deployment guide
+
+For deployment, see the workflows in `.github/workflows/` - they auto-deploy when you push to `main`.
 
 ## Project Structure
 
