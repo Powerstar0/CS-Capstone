@@ -159,6 +159,7 @@ onUnmounted(() => clearInterval(tickerInterval))
                 v-model="searchQuery"
                 type="text"
                 placeholder="Search currencies"
+                autocomplete="off"
                 @focus="handleSearchFocus"
                 @blur="handleSearchBlur"
                 class="search-input w-48 focus:w-64 px-4 py-2 pl-10 bg-bg-primary border border-gray-700 rounded-full text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-all duration-300 text-sm"

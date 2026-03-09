@@ -36,42 +36,53 @@
 
       <!-- Right: Trading Widgets Sidebar -->
       <div class="widgets-sidebar">
-        <!-- Tab Switcher -->
-        <div class="flex gap-1 p-1 bg-bg-primary rounded-xl mb-4">
-          <button
-            @click="activeTab = 'exchange'"
-            :class="['flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200',
-              activeTab === 'exchange' ? 'bg-primary text-black shadow' : 'text-gray-400 hover:text-white']"
-          >
-            Exchange
-          </button>
-          <button
-            @click="activeTab = 'send'"
-            :class="['flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200',
-              activeTab === 'send' ? 'bg-primary text-black shadow' : 'text-gray-400 hover:text-white']"
-          >
-            Send
-          </button>
-        </div>
-
         <!-- Exchange Widget -->
-        <div v-if="activeTab === 'exchange'" class="glass p-4 rounded-xl">
+        <div class="glass p-4 rounded-xl">
           <h3 class="text-sm font-bold text-white mb-3">Exchange Currency</h3>
 
-          <!-- Order Type Selector -->
+          <!-- Order Type & Buy/Sell Row -->
           <div class="mb-4">
             <label class="text-xs text-gray-400 mb-1.5 block font-medium">Order Type</label>
-            <div class="relative">
-              <select v-model="orderType"
-                class="w-full px-3 py-2.5 bg-gradient-to-br from-bg-primary to-bg-secondary border-2 border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-primary focus:shadow-lg focus:shadow-primary/20 transition-all appearance-none cursor-pointer hover:border-gray-600 font-semibold">
-                <option value="Market">Market Order</option>
-                <option value="Limit">Limit Order</option>
-                <option value="Stop">Stop Order</option>
-                <option value="Stop-Limit">Stop-Limit Order</option>
-              </select>
-              <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
+            <div class="flex gap-2">
+              <!-- Order Type Selector -->
+              <div class="relative flex-1">
+                <select v-model="orderType"
+                  class="w-full px-3 py-2.5 bg-gradient-to-br from-bg-primary to-bg-secondary border-2 border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-primary focus:shadow-lg focus:shadow-primary/20 transition-all appearance-none cursor-pointer hover:border-gray-600 font-semibold">
+                  <option value="Market">Market Order</option>
+                  <option value="Limit">Limit Order</option>
+                  <option value="Stop">Stop Order</option>
+                  <option value="Stop-Limit">Stop-Limit Order</option>
+                </select>
+                <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+              
+              <!-- Buy/Sell Toggle -->
+              <div class="flex rounded-lg border-2 border-gray-700 overflow-hidden">
+                <button
+                  @click="orderSide = 'buy'"
+                  :class="[
+                    'px-4 py-2.5 text-sm font-bold transition-all',
+                    orderSide === 'buy' 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-bg-primary text-gray-400 hover:text-white'
+                  ]"
+                >
+                  Buy
+                </button>
+                <button
+                  @click="orderSide = 'sell'"
+                  :class="[
+                    'px-4 py-2.5 text-sm font-bold transition-all',
+                    orderSide === 'sell' 
+                      ? 'bg-red-600 text-white' 
+                      : 'bg-bg-primary text-gray-400 hover:text-white'
+                  ]"
+                >
+                  Sell
+                </button>
+              </div>
             </div>
             <p class="text-xs text-gray-500 mt-1.5 italic">
               {{ orderType === 'Market' ? 'Execute immediately at current price' : 
@@ -81,22 +92,16 @@
             </p>
           </div>
 
-          <!-- From / To Row -->
+          <!-- Currency Pair (Locked to Chart) -->
           <div class="mb-4">
             <label class="text-xs text-gray-400 mb-1.5 block font-medium">Currency Pair</label>
             <div class="flex items-center gap-2">
-              <div class="flex-1 relative">
-                <select v-model="fromCurrency" @change="fetchRate"
-                  class="w-full px-3 py-2.5 bg-gradient-to-br from-bg-primary to-bg-secondary border-2 border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-primary focus:shadow-lg focus:shadow-primary/20 transition-all appearance-none cursor-pointer hover:border-gray-600 font-bold">
-                  <option value="USD">USD</option>
-                  <option value="AUD">AUD</option>
-                  <option value="CAD">CAD</option>
-                </select>
-                <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
+              <!-- From Currency (Display Only) -->
+              <div class="flex-1 px-3 py-2.5 bg-gradient-to-br from-bg-primary to-bg-secondary border-2 border-gray-700 rounded-lg">
+                <span class="text-white text-sm font-bold">{{ fromCurrency }}</span>
               </div>
               
+              <!-- Swap Button -->
               <button @click="swapCurrencies"
                 class="p-2 rounded-lg border-2 border-gray-700 text-gray-400 hover:border-primary hover:text-primary hover:bg-primary/10 transition-all">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -105,16 +110,9 @@
                 </svg>
               </button>
               
-              <div class="flex-1 relative">
-                <select v-model="toCurrency" @change="fetchRate"
-                  class="w-full px-3 py-2.5 bg-gradient-to-br from-bg-primary to-bg-secondary border-2 border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-primary focus:shadow-lg focus:shadow-primary/20 transition-all appearance-none cursor-pointer hover:border-gray-600 font-bold">
-                  <option value="USD">USD</option>
-                  <option value="AUD">AUD</option>
-                  <option value="CAD">CAD</option>
-                </select>
-                <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
+              <!-- To Currency (Display Only) -->
+              <div class="flex-1 px-3 py-2.5 bg-gradient-to-br from-bg-primary to-bg-secondary border-2 border-gray-700 rounded-lg">
+                <span class="text-white text-sm font-bold">{{ toCurrency }}</span>
               </div>
             </div>
             <p class="text-xs text-gray-500 mt-1.5">
@@ -168,55 +166,6 @@
           >
             {{ tradeLoading ? 'Processing...' : 'Execute Trade' }}
           </button>
-        </div>
-
-        <!-- Send Widget -->
-        <div v-else class="glass p-4 rounded-xl">
-          <h3 class="text-sm font-bold text-white mb-3">Send to User</h3>
-
-          <div class="space-y-3">
-            <div>
-              <label class="text-xs text-gray-400 mb-1 block">Recipient Email</label>
-              <input
-                v-model="transferEmail"
-                type="email" placeholder="recipient@example.com"
-                class="w-full px-3 py-2 bg-bg-primary border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-primary"
-              />
-            </div>
-
-            <div>
-              <label class="text-xs text-gray-400 mb-1 block">Currency</label>
-              <select v-model="transferCurrency"
-                class="w-full px-3 py-2 bg-bg-primary border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-primary">
-                <option value="USD">USD</option>
-                <option value="AUD">AUD</option>
-                <option value="CAD">CAD</option>
-              </select>
-              <p class="text-xs text-gray-500 mt-1">
-                Balance: <span class="text-gray-300">{{ transferFromBalance.toFixed(2) }}</span>
-              </p>
-            </div>
-
-            <div>
-              <label class="text-xs text-gray-400 mb-1 block">Amount</label>
-              <input
-                v-model.number="transferAmount"
-                type="number" min="0.01" step="0.01" placeholder="0.00"
-                class="w-full px-3 py-2 bg-bg-primary border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-primary"
-              />
-            </div>
-
-            <p v-if="transferError" class="text-red-400 text-xs">{{ transferError }}</p>
-            <p v-if="transferSuccess" class="text-green-400 text-xs">{{ transferSuccess }}</p>
-
-            <button
-              @click="executeTransfer"
-              :disabled="transferLoading || !transferAmount || !transferEmail"
-              class="w-full py-2 bg-primary text-black rounded-full text-sm font-bold hover:opacity-80 transition disabled:opacity-50"
-            >
-              {{ transferLoading ? 'Sending...' : 'Send Funds' }}
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -445,14 +394,6 @@ function updateChartPair() {
   generateChartData()
 }
 
-// Watch for query parameter changes from wishlist navigation
-watch(() => route.query.pair, (newPair) => {
-  if (newPair && newPair !== chartPair.value) {
-    chartPair.value = newPair
-    updateChartPair()
-  }
-}, { immediate: true })
-
 // ── Related News ──────────────────────────────────────────────────────────
 const newsArticles = {
   'EUR/USD': [
@@ -514,6 +455,7 @@ const activeTab = ref('exchange')
 
 // ── Exchange form ─────────────────────────────────────────────────────────
 const orderType = ref('Market')
+const orderSide = ref('buy')
 const fromCurrency   = ref('USD')
 const toCurrency     = ref('AUD')
 const exchangeAmount = ref(null)
@@ -569,6 +511,42 @@ async function fetchRate() {
   }
 }
 
+// Sync currencies from chart pair
+function syncCurrenciesFromChart() {
+  const [from, to] = chartPair.value.split('/')
+  fromCurrency.value = from
+  toCurrency.value = to
+  fetchRate()
+}
+
+// Initialize chart and watches on mount
+onMounted(async () => {
+  await initChart()
+  await portfolioStore.fetchHoldings()
+  loadHistory()
+  fetchRate()
+  
+  // Watch for query parameter changes from wishlist navigation
+  watch(() => route.query.pair, (newPair) => {
+    if (newPair && newPair !== chartPair.value) {
+      chartPair.value = newPair
+      updateChartPair()
+      syncCurrenciesFromChart()
+    }
+  }, { immediate: true })
+  
+  // Watch for chart pair changes and sync currencies
+  watch(chartPair, () => {
+    syncCurrenciesFromChart()
+  })
+})
+
+onUnmounted(() => {
+  if (chart) {
+    window.removeEventListener('resize', handleResize)
+  }
+})
+
 function computeReceive() {
   receiveAmount.value = (currentRate.value && exchangeAmount.value > 0)
     ? exchangeAmount.value * currentRate.value
@@ -576,7 +554,13 @@ function computeReceive() {
 }
 
 function swapCurrencies() {
+  // Swap the currencies
   ;[fromCurrency.value, toCurrency.value] = [toCurrency.value, fromCurrency.value]
+  
+  // Update chart pair to match
+  chartPair.value = `${fromCurrency.value}/${toCurrency.value}`
+  updateChartPair()
+  
   fetchRate()
 }
 
@@ -657,13 +641,6 @@ function formatDate(ts) {
     hour: '2-digit', minute: '2-digit'
   })
 }
-
-onMounted(() => {
-  initChart()
-  fetchRate()
-  loadHistory()
-  if (portfolioStore.holdings.length === 0) portfolioStore.fetchHoldings()
-})
 
 onUnmounted(() => {
   if (chart) {

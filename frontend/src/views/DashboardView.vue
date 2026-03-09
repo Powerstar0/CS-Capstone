@@ -4,218 +4,14 @@
     
     <!-- Adaptive Bento Box Layout -->
     <div class="dashboard-grid">
-      <!-- Left Column: Portfolio + Holdings -->
-      <div class="left-column">
-        <!-- Portfolio Widget -->
-        <div 
-          class="portfolio-widget glass p-6 rounded-xl hover:shadow-xl widget-card"
-        >
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-3">
-            <div
-              draggable="true"
-              @dragstart="handleDragStart($event, 'portfolio')"
-              @dragend="handleDragEnd"
-              class="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-primary/10 rounded"
-            >
-              <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-              </svg>
-            </div>
-            <div>
-              <h2 class="text-xl font-bold text-white">Portfolio</h2>
-              <p class="text-2xl font-bold mt-0.5 text-white">
-                ${{ totalPortfolioValue.toFixed(2) }}
-              </p>
-            </div>
-          </div>
-          <div class="text-right">
-            <p class="text-xs text-gray-500 mb-1">24h Change</p>
-            <p class="text-lg font-bold" :class="portfolioChange >= 0 ? 'text-green-400' : 'text-red-400'">
-              {{ portfolioChange >= 0 ? '+' : '' }}{{ portfolioChange.toFixed(2) }}%
-            </p>
-          </div>
-        </div>
-
-        <!-- Deposit Modal -->
-        <Teleport to="body">
-          <div v-if="showDepositModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click.self="closeDeposit">
-            <div class="bg-bg-secondary border border-gray-700 rounded-2xl p-6 w-full max-w-sm mx-4">
-              <h3 class="text-xl font-bold text-white mb-4">Deposit Funds</h3>
-              <div class="space-y-4">
-                <div>
-                  <label class="text-sm text-gray-400 mb-1 block">Currency</label>
-                  <select v-model="depositCurrency" class="w-full px-4 py-3 bg-bg-primary border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary">
-                    <option value="USD">USD — US Dollar</option>
-                    <option value="AUD">AUD — Australian Dollar</option>
-                    <option value="CAD">CAD — Canadian Dollar</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="text-sm text-gray-400 mb-1 block">Amount</label>
-                  <input
-                    v-model.number="depositAmount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    placeholder="0.00"
-                    class="w-full px-4 py-3 bg-bg-primary border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary"
-                  />
-                </div>
-                <p v-if="depositError" class="text-red-400 text-sm">{{ depositError }}</p>
-                <div class="flex gap-3 pt-2">
-                  <button @click="closeDeposit" class="flex-1 py-3 border border-gray-600 text-gray-400 rounded-full font-bold hover:border-gray-400 transition">
-                    Cancel
-                  </button>
-                  <button @click="handleDeposit" :disabled="depositLoading" class="flex-1 py-3 bg-primary text-black rounded-full font-bold hover:opacity-80 transition disabled:opacity-50">
-                    {{ depositLoading ? 'Depositing...' : 'Confirm' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Teleport>
-
-        <!-- Withdraw Modal -->
-        <Teleport to="body">
-          <div v-if="showWithdrawModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click.self="closeWithdraw">
-            <div class="bg-bg-secondary border border-gray-700 rounded-2xl p-6 w-full max-w-sm mx-4">
-              <h3 class="text-xl font-bold text-white mb-4">Withdraw Funds</h3>
-              <div class="space-y-4">
-                <div>
-                  <label class="text-sm text-gray-400 mb-1 block">Currency</label>
-                  <select v-model="withdrawCurrency" class="w-full px-4 py-3 bg-bg-primary border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary">
-                    <option value="USD">USD — US Dollar</option>
-                    <option value="AUD">AUD — Australian Dollar</option>
-                    <option value="CAD">CAD — Canadian Dollar</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="text-sm text-gray-400 mb-1 block">Amount</label>
-                  <input
-                    v-model.number="withdrawAmount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    placeholder="0.00"
-                    class="w-full px-4 py-3 bg-bg-primary border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary"
-                  />
-                </div>
-                <p v-if="withdrawError" class="text-red-400 text-sm">{{ withdrawError }}</p>
-                <div class="flex gap-3 pt-2">
-                  <button @click="closeWithdraw" class="flex-1 py-3 border border-gray-600 text-gray-400 rounded-full font-bold hover:border-gray-400 transition">
-                    Cancel
-                  </button>
-                  <button @click="handleWithdraw" :disabled="withdrawLoading" class="flex-1 py-3 bg-red-600 text-white rounded-full font-bold hover:opacity-80 transition disabled:opacity-50">
-                    {{ withdrawLoading ? 'Withdrawing...' : 'Confirm' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Teleport>
-
-        <div class="bg-bg-primary rounded-lg p-4 flex-1 flex flex-col overflow-hidden" style="min-height: 350px; max-height: 350px;">
-          <div v-if="portfolioStore.loading" class="flex items-center justify-center h-full">
-            <div class="h-48 w-full bg-bg-secondary rounded-lg animate-pulse"></div>
-          </div>
-          <div v-else-if="portfolioStore.error" class="flex items-center justify-center h-full text-red-400 text-sm">
-            {{ portfolioStore.error }}
-          </div>
-          <div v-else-if="portfolioStore.holdings.length === 0" class="flex items-center justify-center h-full text-gray-500 text-sm">
-            No holdings yet. Deposit funds to get started.
-          </div>
-          <div v-else class="flex flex-col justify-center items-center h-full w-full" style="padding-right: 1rem;">
-            <!-- Portfolio Line Chart -->
-            <div class="w-full h-full flex items-center justify-center">
-              <Line :data="portfolioLineChartData" :options="portfolioLineChartOptions" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Buying Power Widget (below Portfolio) -->
-      <div class="glass p-4 rounded-xl hover:shadow-xl widget-card">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-4">
-            <div>
-              <p class="text-xs text-gray-400 mb-1">Buying Power</p>
-              <p class="text-xl font-bold text-white">${{ portfolioStore.balance?.toFixed(2) || '0.00' }}</p>
-            </div>
-          </div>
-          <div class="flex gap-2">
-            <button 
-              @click="showDepositModal = true"
-              class="px-4 py-2 bg-gradient-to-r from-primary to-primary/80 text-black font-bold rounded-lg hover:shadow-lg hover:shadow-primary/30 transition-all text-sm"
-            >
-              Deposit
-            </button>
-            <button 
-              @click="showWithdrawModal = true"
-              class="px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-600 text-white font-bold rounded-lg hover:shadow-lg hover:shadow-gray-500/30 transition-all text-sm"
-            >
-              Withdraw
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Holdings Widget (below Portfolio) -->
-      <div class="glass p-6 rounded-xl hover:shadow-xl widget-card flex flex-col">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold text-white">Holdings</h2>
-        </div>
-        
-        <div class="bg-bg-primary rounded-lg p-4 flex-1 overflow-auto">
-          <div v-if="portfolioStore.loading" class="space-y-1.5">
-            <div class="h-12 bg-bg-secondary rounded-lg animate-pulse"></div>
-            <div class="h-12 bg-bg-secondary rounded-lg animate-pulse"></div>
-            <div class="h-12 bg-bg-secondary rounded-lg animate-pulse"></div>
-          </div>
-          <div v-else-if="portfolioStore.error" class="flex items-center justify-center h-full text-red-400 text-sm">
-            {{ portfolioStore.error }}
-          </div>
-          <div v-else-if="portfolioStore.holdings.length === 0" class="flex items-center justify-center h-full text-gray-500 text-sm">
-            No holdings yet
-          </div>
-          <div v-else class="space-y-1.5">
-            <div
-              v-for="holding in portfolioStore.holdings"
-              :key="holding['currency-ticker-symbol'] || holding.currency"
-              class="flex justify-between items-center px-3 py-2.5 bg-bg-secondary rounded-lg hover:border-primary border border-transparent transition-all cursor-pointer group"
-            >
-              <div>
-                <p class="font-bold text-white text-sm group-hover:text-primary transition">{{ holding['currency-ticker-symbol'] || holding.currency }}</p>
-                <p class="text-xs text-gray-500 mt-0.5">{{ holding.currency || 'Currency' }}</p>
-              </div>
-              <div class="text-right">
-                <p class="font-mono text-white text-sm">{{ Number(holding.amount).toFixed(2) }}</p>
-                <p class="text-xs text-gray-500 mt-0.5">${{ (Number(holding.amount) * 1.2).toFixed(2) }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Holdings Footer -->
-        <div class="widget-footer">
-          <div class="flex justify-between items-center">
-            <p class="text-xs text-gray-400">{{ portfolioStore.holdings?.length || 0 }} currencies held</p>
-            <button class="text-xs text-primary hover:text-primary/80 font-bold transition">
-              Manage →
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-      <!-- Adaptive Widgets Container -->
+      <!-- Left Column: Adaptive Widgets (Holdings/Wishlist/Feed) -->
       <div class="adaptive-widgets">
         <template v-for="widgetId in sideWidgets" :key="widgetId">
           <!-- Holdings Widget -->
           <div 
             v-if="widgetId === 'holdings'"
-            @dragover.prevent="handleDragOver($event, 'holdings')"
-            @drop="handleDrop($event, 'holdings')"
+            @dragover.prevent="handleDragOver($event, 'holdings', 'side')"
+            @drop="handleDrop($event, 'holdings', 'side')"
             :class="`glass rounded-xl hover:shadow-xl widget-card flex flex-col ${
               draggedWidget === 'holdings' ? 'dragging-placeholder' : ''
             }`"
@@ -224,7 +20,7 @@
               <div class="flex items-center gap-2">
                 <div 
                   draggable="true"
-                  @dragstart="handleDragStart($event, 'holdings')"
+                  @dragstart="handleDragStart($event, 'holdings', 'side')"
                   @dragend="handleDragEnd"
                   class="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-primary/10 rounded"
                 >
@@ -277,10 +73,10 @@
           </div>
 
           <!-- Wishlist Widget -->
-          <div 
+          <div
             v-if="widgetId === 'wishlist'"
-            @dragover.prevent="handleDragOver($event, 'wishlist')"
-            @drop="handleDrop($event, 'wishlist')"
+            @dragover.prevent="handleDragOver($event, 'wishlist', 'side')"
+            @drop="handleDrop($event, 'wishlist', 'side')"
             :class="`glass rounded-xl hover:shadow-xl widget-card flex flex-col ${
               draggedWidget === 'wishlist' ? 'dragging-placeholder' : ''
             }`"
@@ -289,7 +85,7 @@
               <div class="flex items-center gap-2">
                 <div 
                   draggable="true"
-                  @dragstart="handleDragStart($event, 'wishlist')"
+                  @dragstart="handleDragStart($event, 'wishlist', 'side')"
                   @dragend="handleDragEnd"
                   class="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-primary/10 rounded"
                 >
@@ -334,10 +130,10 @@
           </div>
 
           <!-- Feed Widget -->
-          <div 
+          <div
             v-else-if="widgetId === 'feed'"
-            @dragover.prevent="handleDragOver($event, 'feed')"
-            @drop="handleDrop($event, 'feed')"
+            @dragover.prevent="handleDragOver($event, 'feed', 'side')"
+            @drop="handleDrop($event, 'feed', 'side')"
             :class="`glass rounded-xl hover:shadow-xl widget-card flex flex-col ${
               draggedWidget === 'feed' ? 'dragging-placeholder' : ''
             }`"
@@ -346,7 +142,7 @@
               <div class="flex items-center gap-2">
                 <div 
                   draggable="true"
-                  @dragstart="handleDragStart($event, 'feed')"
+                  @dragstart="handleDragStart($event, 'feed', 'side')"
                   @dragend="handleDragEnd"
                   class="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-primary/10 rounded"
                 >
@@ -381,6 +177,253 @@
               </div>
             </div>
           </div>
+        </template>
+      </div>
+
+      <!-- Right Column: Portfolio + Buying Power + Holdings -->
+      <div class="left-column">
+        <template v-for="widgetId in mainWidgets" :key="widgetId">
+          <!-- Portfolio Widget -->
+          <div 
+            v-if="widgetId === 'portfolio'"
+            @dragover.prevent="handleDragOver($event, 'portfolio', 'main')"
+            @drop="handleDrop($event, 'portfolio', 'main')"
+            :class="`portfolio-widget glass p-6 rounded-xl hover:shadow-xl widget-card ${
+              draggedWidget === 'portfolio' ? 'dragging-placeholder' : ''
+            }`"
+          >
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div
+                draggable="true"
+                @dragstart="handleDragStart($event, 'portfolio', 'main')"
+                @dragend="handleDragEnd"
+                class="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-primary/10 rounded"
+              >
+                <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-white">Portfolio</h2>
+                <p class="text-2xl font-bold mt-0.5 text-white">
+                  ${{ totalPortfolioValue.toFixed(2) }}
+                </p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-gray-500 mb-1">24h Change</p>
+              <p class="text-lg font-bold" :class="portfolioChange >= 0 ? 'text-green-400' : 'text-red-400'">
+                {{ portfolioChange >= 0 ? '+' : '' }}{{ portfolioChange.toFixed(2) }}%
+              </p>
+            </div>
+          </div>
+
+          <!-- Deposit Modal -->
+          <Teleport to="body">
+            <div v-if="showDepositModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click.self="closeDeposit">
+              <div class="bg-bg-secondary border border-gray-700 rounded-2xl p-6 w-full max-w-sm mx-4">
+                <h3 class="text-xl font-bold text-white mb-4">Deposit Funds</h3>
+                <div class="space-y-4">
+                  <div>
+                    <label class="text-sm text-gray-400 mb-1 block">Currency</label>
+                    <select v-model="depositCurrency" class="w-full px-4 py-3 bg-bg-primary border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary">
+                      <option value="USD">USD — US Dollar</option>
+                      <option value="AUD">AUD — Australian Dollar</option>
+                      <option value="CAD">CAD — Canadian Dollar</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-sm text-gray-400 mb-1 block">Amount</label>
+                    <input
+                      v-model.number="depositAmount"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      placeholder="0.00"
+                      class="w-full px-4 py-3 bg-bg-primary border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <p v-if="depositError" class="text-red-400 text-sm">{{ depositError }}</p>
+                  <div class="flex gap-3 pt-2">
+                    <button @click="closeDeposit" class="flex-1 py-3 border border-gray-600 text-gray-400 rounded-full font-bold hover:border-gray-400 transition">
+                      Cancel
+                    </button>
+                    <button @click="handleDeposit" :disabled="depositLoading" class="flex-1 py-3 bg-primary text-black rounded-full font-bold hover:opacity-80 transition disabled:opacity-50">
+                      {{ depositLoading ? 'Depositing...' : 'Confirm' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Teleport>
+
+          <!-- Withdraw Modal -->
+          <Teleport to="body">
+            <div v-if="showWithdrawModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @click.self="closeWithdraw">
+              <div class="bg-bg-secondary border border-gray-700 rounded-2xl p-6 w-full max-w-sm mx-4">
+                <h3 class="text-xl font-bold text-white mb-4">Withdraw Funds</h3>
+                <div class="space-y-4">
+                  <div>
+                    <label class="text-sm text-gray-400 mb-1 block">Currency</label>
+                    <select v-model="withdrawCurrency" class="w-full px-4 py-3 bg-bg-primary border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary">
+                      <option value="USD">USD — US Dollar</option>
+                      <option value="AUD">AUD — Australian Dollar</option>
+                      <option value="CAD">CAD — Canadian Dollar</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-sm text-gray-400 mb-1 block">Amount</label>
+                    <input
+                      v-model.number="withdrawAmount"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      placeholder="0.00"
+                      class="w-full px-4 py-3 bg-bg-primary border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <p v-if="withdrawError" class="text-red-400 text-sm">{{ withdrawError }}</p>
+                  <div class="flex gap-3 pt-2">
+                    <button @click="closeWithdraw" class="flex-1 py-3 border border-gray-600 text-gray-400 rounded-full font-bold hover:border-gray-400 transition">
+                      Cancel
+                    </button>
+                    <button @click="handleWithdraw" :disabled="withdrawLoading" class="flex-1 py-3 bg-red-600 text-white rounded-full font-bold hover:opacity-80 transition disabled:opacity-50">
+                      {{ withdrawLoading ? 'Withdrawing...' : 'Confirm' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Teleport>
+
+          <div class="bg-bg-primary rounded-lg p-4 flex-1 flex flex-col overflow-hidden" style="min-height: 350px; max-height: 350px;">
+            <div v-if="portfolioStore.loading" class="flex items-center justify-center h-full">
+              <div class="h-48 w-full bg-bg-secondary rounded-lg animate-pulse"></div>
+            </div>
+            <div v-else-if="portfolioStore.error" class="flex items-center justify-center h-full text-red-400 text-sm">
+              {{ portfolioStore.error }}
+            </div>
+            <div v-else-if="portfolioStore.holdings.length === 0" class="flex items-center justify-center h-full text-gray-500 text-sm">
+              No holdings yet. Deposit funds to get started.
+            </div>
+            <div v-else class="flex flex-col justify-center items-center h-full w-full" style="padding-right: 1rem;">
+              <!-- Portfolio Line Chart -->
+              <div class="w-full h-full flex items-center justify-center">
+                <Line :data="portfolioLineChartData" :options="portfolioLineChartOptions" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Buying Power Widget -->
+        <div 
+          v-if="widgetId === 'buyingPower'"
+          @dragover.prevent="handleDragOver($event, 'buyingPower', 'main')"
+          @drop="handleDrop($event, 'buyingPower', 'main')"
+          :class="`glass p-4 rounded-xl hover:shadow-xl widget-card ${
+            draggedWidget === 'buyingPower' ? 'dragging-placeholder' : ''
+          }`"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div
+                draggable="true"
+                @dragstart="handleDragStart($event, 'buyingPower', 'main')"
+                @dragend="handleDragEnd"
+                class="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-primary/10 rounded"
+              >
+                <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400 mb-1">Buying Power</p>
+                <p class="text-xl font-bold text-white">${{ portfolioStore.balance?.toFixed(2) || '0.00' }}</p>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button 
+                @click="showDepositModal = true"
+                class="px-4 py-2 bg-gradient-to-r from-primary to-primary/80 text-black font-bold rounded-lg hover:shadow-lg hover:shadow-primary/30 transition-all text-sm"
+              >
+                Deposit
+              </button>
+              <button 
+                @click="showWithdrawModal = true"
+                class="px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-600 text-white font-bold rounded-lg hover:shadow-lg hover:shadow-gray-500/30 transition-all text-sm"
+              >
+                Withdraw
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Holdings Widget (Main Column) -->
+        <div 
+          v-if="widgetId === 'holdingsMain'"
+          @dragover.prevent="handleDragOver($event, 'holdingsMain', 'main')"
+          @drop="handleDrop($event, 'holdingsMain', 'main')"
+          :class="`glass p-6 rounded-xl hover:shadow-xl widget-card flex flex-col ${
+            draggedWidget === 'holdingsMain' ? 'dragging-placeholder' : ''
+          }`"
+        >
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div
+                draggable="true"
+                @dragstart="handleDragStart($event, 'holdingsMain', 'main')"
+                @dragend="handleDragEnd"
+                class="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-primary/10 rounded"
+              >
+                <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+                </svg>
+              </div>
+              <h2 class="text-xl font-bold text-white">Holdings</h2>
+            </div>
+          </div>
+          
+          <div class="bg-bg-primary rounded-lg p-4 flex-1 overflow-auto">
+            <div v-if="portfolioStore.loading" class="space-y-1.5">
+              <div class="h-12 bg-bg-secondary rounded-lg animate-pulse"></div>
+              <div class="h-12 bg-bg-secondary rounded-lg animate-pulse"></div>
+              <div class="h-12 bg-bg-secondary rounded-lg animate-pulse"></div>
+            </div>
+            <div v-else-if="portfolioStore.error" class="flex items-center justify-center h-full text-red-400 text-sm">
+              {{ portfolioStore.error }}
+            </div>
+            <div v-else-if="portfolioStore.holdings.length === 0" class="flex items-center justify-center h-full text-gray-500 text-sm">
+              No holdings yet
+            </div>
+            <div v-else class="space-y-1.5">
+              <div
+                v-for="holding in portfolioStore.holdings"
+                :key="holding['currency-ticker-symbol'] || holding.currency"
+                class="flex justify-between items-center px-3 py-2.5 bg-bg-secondary rounded-lg hover:border-primary border border-transparent transition-all cursor-pointer group"
+              >
+                <div>
+                  <p class="font-bold text-white text-sm group-hover:text-primary transition">{{ holding['currency-ticker-symbol'] || holding.currency }}</p>
+                  <p class="text-xs text-gray-500 mt-0.5">{{ holding.currency || 'Currency' }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-mono text-white text-sm">{{ Number(holding.amount).toFixed(2) }}</p>
+                  <p class="text-xs text-gray-500 mt-0.5">${{ (Number(holding.amount) * 1.2).toFixed(2) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Holdings Footer -->
+          <div class="widget-footer">
+            <div class="flex justify-between items-center">
+              <p class="text-xs text-gray-400">{{ portfolioStore.holdings?.length || 0 }} currencies held</p>
+              <button class="text-xs text-primary hover:text-primary/80 font-bold transition">
+                Manage →
+              </button>
+            </div>
+          </div>
+        </div>
         </template>
       </div>
     </div>
@@ -662,29 +705,36 @@ async function handleWithdraw() {
   }
 }
 
-// Portfolio is always main, only side widgets can be reordered
+// Main column and side widgets can be reordered independently
+const mainWidgets = ref(['portfolio', 'buyingPower', 'holdingsMain'])
 const sideWidgets = ref(['holdings', 'wishlist', 'feed'])
 const draggedWidget = ref(null)
+const draggedColumn = ref(null)
 
-const handleDragStart = (event, widgetId) => {
-  // Only allow dragging side widgets
-  if (widgetId === 'portfolio') return
-  
+const handleDragStart = (event, widgetId, column) => {
   draggedWidget.value = widgetId
+  draggedColumn.value = column
   event.dataTransfer.effectAllowed = 'move'
 }
 
-const handleDragOver = (event, widgetId) => {
+const handleDragOver = (event, widgetId, column) => {
   event.preventDefault()
   
-  if (!draggedWidget.value || draggedWidget.value === widgetId || draggedWidget.value === 'portfolio') {
+  // Only allow drag within the same column
+  if (!draggedWidget.value || draggedColumn.value !== column) {
     return
   }
   
-  // Live reorder side widgets
-  const newOrder = [...sideWidgets.value]
+  if (draggedWidget.value === widgetId) return
+  
+  const widgets = column === 'main' ? mainWidgets : sideWidgets
+  
+  // Live reorder widgets
+  const newOrder = [...widgets.value]
   const dragIndex = newOrder.indexOf(draggedWidget.value)
   const dropIndex = newOrder.indexOf(widgetId)
+  
+  if (dragIndex === -1 || dropIndex === -1) return
   
   // Remove from current position
   newOrder.splice(dragIndex, 1)
@@ -692,29 +742,44 @@ const handleDragOver = (event, widgetId) => {
   // Insert at new position
   newOrder.splice(dropIndex, 0, draggedWidget.value)
   
-  sideWidgets.value = newOrder
+  widgets.value = newOrder
 }
 
-const handleDrop = (event, widgetId) => {
+const handleDrop = (event, widgetId, column) => {
   event.preventDefault()
   
   // Save to localStorage
-  localStorage.setItem('sideWidgetOrder', JSON.stringify(sideWidgets.value))
+  if (column === 'main') {
+    localStorage.setItem('mainWidgetOrder', JSON.stringify(mainWidgets.value))
+  } else {
+    localStorage.setItem('sideWidgetOrder', JSON.stringify(sideWidgets.value))
+  }
   
   draggedWidget.value = null
+  draggedColumn.value = null
 }
 
 const handleDragEnd = () => {
   draggedWidget.value = null
+  draggedColumn.value = null
 }
 
 // Load saved state
-const savedOrder = localStorage.getItem('sideWidgetOrder')
-if (savedOrder) {
+const savedMainOrder = localStorage.getItem('mainWidgetOrder')
+if (savedMainOrder) {
   try {
-    sideWidgets.value = JSON.parse(savedOrder)
+    mainWidgets.value = JSON.parse(savedMainOrder)
   } catch (e) {
-    console.error('Failed to load widget order', e)
+    console.error('Failed to load main widget order', e)
+  }
+}
+
+const savedSideOrder = localStorage.getItem('sideWidgetOrder')
+if (savedSideOrder) {
+  try {
+    sideWidgets.value = JSON.parse(savedSideOrder)
+  } catch (e) {
+    console.error('Failed to load side widget order', e)
   }
 }
 </script>
@@ -740,7 +805,7 @@ if (savedOrder) {
 
 @media (min-width: 1024px) {
   .dashboard-grid {
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 1fr 2fr;
     grid-template-rows: auto;
     gap: 1rem;
   }
@@ -749,6 +814,14 @@ if (savedOrder) {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    order: 2;
+  }
+  
+  .adaptive-widgets {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    order: 1;
   }
   
   .portfolio-widget {
@@ -756,12 +829,6 @@ if (savedOrder) {
     max-height: 480px;
     display: flex;
     flex-direction: column;
-  }
-  
-  .adaptive-widgets {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
   }
   
   .adaptive-widgets > div {
