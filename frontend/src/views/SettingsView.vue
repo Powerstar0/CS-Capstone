@@ -198,6 +198,19 @@
               <span class="toggle-slider"></span>
             </label>
           </div>
+
+          <div class="divider"></div>
+
+          <div class="setting-toggle">
+            <div>
+              <h3 class="setting-toggle-title">Enable Admin</h3>
+              <p class="setting-toggle-description">Grant admin access to manage LLM API keys</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" :checked="isAdmin" @change="toggleAdmin" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -240,9 +253,30 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { preferencesApi } from '@/services/api'
 
 const activeTab = ref('profile')
+const isAdmin = ref(false)
+
+onMounted(async () => {
+  try {
+    const { data } = await preferencesApi.get()
+    isAdmin.value = !!data.is_admin
+  } catch {
+    // preferences may not have is_admin yet
+  }
+})
+
+async function toggleAdmin() {
+  const newValue = !isAdmin.value
+  try {
+    await preferencesApi.update({ is_admin: newValue })
+    isAdmin.value = newValue
+  } catch {
+    // revert — keep isAdmin unchanged
+  }
+}
 
 const tabs = [
   {

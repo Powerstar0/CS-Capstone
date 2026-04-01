@@ -60,4 +60,13 @@ export const preferencesApi = {
   update: (data) => apiClient.put('/preferences/', data),
 }
 
+export const llmApi = {
+  chat:        (messages)  => apiClient.post('/llm/chat', { messages }),
+  // Admin-only key management
+  getKeys:     ()          => apiClient.get('/llm/keys'),
+  createKey:   (data)      => apiClient.post('/llm/keys', data),
+  activateKey: (keyId)     => apiClient.put(`/llm/keys/${keyId}/activate`),
+  deleteKey:   (keyId)     => apiClient.delete(`/llm/keys/${keyId}`),
+}
+
 export default apiClient

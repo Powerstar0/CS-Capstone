@@ -79,3 +79,4 @@ class PreferencesUpdate(BaseModel):
     enable_darkmode: Optional[bool] = None
     device_type: Optional[str] = None   # e.g. "DESKTOP", "MOBILE", "TABLET"
     timezone: Optional[str] = None      # must match the Supabase timezone enum
+    is_admin: Optional[bool] = None
