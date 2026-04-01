@@ -265,6 +265,7 @@ onUnmounted(() => clearInterval(tickerInterval))
             <div class="hidden md:flex gap-2">
               <RouterLink to="/dashboard" class="nav-link">Dashboard</RouterLink>
               <RouterLink to="/news" class="nav-link">News</RouterLink>
+              <RouterLink to="/ai" class="nav-link">AI</RouterLink>
               <RouterLink to="/settings" class="nav-link">Settings</RouterLink>
             </div>
             
