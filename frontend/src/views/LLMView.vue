@@ -116,7 +116,7 @@
           <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold mt-1">
             Ex
           </div>
-          <div class="glass rounded-2xl rounded-bl-md px-4 py-3 text-gray-200 whitespace-pre-wrap">{{ msg.content }}</div>
+          <div class="glass rounded-2xl rounded-bl-md px-4 py-3 text-gray-200 prose prose-invert" v-html="renderAssistantMarkdown(msg.content)"></div>
         </div>
 
         <!-- User bubble -->
@@ -167,8 +167,11 @@
 
 <script setup>
 import { ref, watch, nextTick, onMounted } from 'vue'
+import MarkdownIt from 'markdown-it'
 import { useLlmStore } from '@/stores/llm'
 import { preferencesApi, llmApi } from '@/services/api'
+
+const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
 
 const store = useLlmStore()
 const input = ref('')
@@ -221,6 +224,12 @@ async function activateKey(keyId) {
 async function deleteKey(keyId) {
   await llmApi.deleteKey(keyId)
   await loadKeys()
+}
+
+function renderAssistantMarkdown(text) {
+  // Convert markdown from LLM into HTML output for display
+  // Disabled raw HTML to avoid injection from untrusted model text
+  return md.render(text || '')
 }
 
 function send(text) {
