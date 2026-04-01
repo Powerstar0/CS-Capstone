@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from models import RateResponse
-from forex_service import get_rate, get_rates
+from forex_service import get_rate, get_rates, SUPPORTED_CURRENCIES
 
 router = APIRouter()
 
 # Default pairs shown in the ticker banner
 DEFAULT_PAIRS = [
+    # Major pairs
     ("EUR", "USD"),
     ("GBP", "USD"),
     ("USD", "JPY"),
@@ -14,9 +15,25 @@ DEFAULT_PAIRS = [
     ("USD", "CAD"),
     ("USD", "CHF"),
     ("NZD", "USD"),
+    # Major crosses
     ("EUR", "GBP"),
     ("EUR", "JPY"),
     ("GBP", "JPY"),
+    # Popular minors
+    ("USD", "SEK"),
+    ("USD", "NOK"),
+    ("USD", "DKK"),
+    ("USD", "SGD"),
+    ("USD", "HKD"),
+    ("USD", "MXN"),
+    ("USD", "ZAR"),
+    ("USD", "TRY"),
+    ("USD", "BRL"),
+    ("USD", "INR"),
+    ("USD", "CNY"),
+    ("USD", "KRW"),
+    ("USD", "PLN"),
+    ("USD", "THB"),
 ]
 
 
@@ -62,4 +79,15 @@ async def live_rates(pairs: str = None):
     return {
         "rates": rates,
         "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.get("/currencies")
+async def list_currencies():
+    """Return all supported currency tickers with their full names."""
+    return {
+        "currencies": [
+            {"code": code, "name": name}
+            for code, name in SUPPORTED_CURRENCIES.items()
+        ]
     }

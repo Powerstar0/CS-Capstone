@@ -1,14 +1,86 @@
 """
 Forex rate service — uses yfinance for live currency pair rates.
 Results are cached in-process for CACHE_TTL seconds.
+Historical rates are cached separately with a longer TTL.
 """
 
 import time
 import yfinance as yf
 
 CACHE_TTL = 10  # seconds between live fetches for the same pair
+HISTORY_CACHE_TTL = 300  # 5 minutes for historical data
+
+# All currencies supported by yfinance forex feeds.
+# Dict maps 3-letter ISO code -> full name.
+SUPPORTED_CURRENCIES: dict[str, str] = {
+    # G7 / Majors
+    "USD": "US Dollar",
+    "EUR": "Euro",
+    "GBP": "British Pound",
+    "JPY": "Japanese Yen",
+    "CHF": "Swiss Franc",
+    "AUD": "Australian Dollar",
+    "CAD": "Canadian Dollar",
+    "NZD": "New Zealand Dollar",
+    # Scandinavia
+    "SEK": "Swedish Krona",
+    "NOK": "Norwegian Krone",
+    "DKK": "Danish Krone",
+    # Asia-Pacific
+    "SGD": "Singapore Dollar",
+    "HKD": "Hong Kong Dollar",
+    "TWD": "Taiwan Dollar",
+    "KRW": "South Korean Won",
+    "THB": "Thai Baht",
+    "MYR": "Malaysian Ringgit",
+    "PHP": "Philippine Peso",
+    "IDR": "Indonesian Rupiah",
+    "INR": "Indian Rupee",
+    "CNY": "Chinese Yuan",
+    # Latin America
+    "MXN": "Mexican Peso",
+    "BRL": "Brazilian Real",
+    "CLP": "Chilean Peso",
+    "COP": "Colombian Peso",
+    "PEN": "Peruvian Sol",
+    "ARS": "Argentine Peso",
+    # Africa
+    "ZAR": "South African Rand",
+    "NGN": "Nigerian Naira",
+    "KES": "Kenyan Shilling",
+    "EGP": "Egyptian Pound",
+    # Middle East
+    "TRY": "Turkish Lira",
+    "ILS": "Israeli Shekel",
+    "SAR": "Saudi Riyal",
+    "AED": "UAE Dirham",
+    "QAR": "Qatari Riyal",
+    "KWD": "Kuwaiti Dinar",
+    "BHD": "Bahraini Dinar",
+    "OMR": "Omani Rial",
+    "JOD": "Jordanian Dinar",
+    # Europe (emerging)
+    "PLN": "Polish Zloty",
+    "CZK": "Czech Koruna",
+    "HUF": "Hungarian Forint",
+    "RON": "Romanian Leu",
+    "RUB": "Russian Ruble",
+}
 
 _cache: dict[str, tuple[float, float]] = {}  # key -> (rate, fetched_at)
+_history_cache: dict[str, tuple[list[dict], float]] = {}  # key -> (data, fetched_at)
+
+# Map UI period labels to yfinance (period, interval) pairs
+PERIOD_MAP: dict[str, tuple[str, str]] = {
+    "1d":  ("1d",  "5m"),
+    "1wk": ("5d",  "1h"),
+    "1mo": ("1mo", "1d"),
+    "3mo": ("3mo", "1d"),
+    "6mo": ("6mo", "1d"),
+    "1y":  ("1y",  "1d"),
+    "3y":  ("3y",  "1wk"),
+    "5y":  ("5y",  "1wk"),
+}
 
 
 def get_rate(from_currency: str, to_currency: str) -> float:
@@ -55,3 +127,52 @@ def get_rates(pairs: list[tuple[str, str]]) -> dict[str, float]:
     Each pair is still individually cached.
     """
     return {f"{f}{t}": get_rate(f, t) for f, t in pairs}
+
+
+def get_historical_rates(
+    from_currency: str, to_currency: str, period: str
+) -> list[dict]:
+    """
+    Return historical exchange rates as [{"date": ISO str, "rate": float}, ...].
+    ``period`` must be a key in PERIOD_MAP (e.g. "1mo", "3mo", "1y").
+    Results are cached for HISTORY_CACHE_TTL seconds.
+    """
+    from_currency = from_currency.upper()
+    to_currency = to_currency.upper()
+
+    if from_currency == to_currency:
+        return []
+
+    if period not in PERIOD_MAP:
+        raise ValueError(f"Invalid period '{period}'. Must be one of {list(PERIOD_MAP)}")
+
+    yf_period, yf_interval = PERIOD_MAP[period]
+    key = f"{from_currency}{to_currency}:{period}"
+    now = time.time()
+
+    cached_data, fetched_at = _history_cache.get(key, (None, 0))
+    if cached_data is not None and (now - fetched_at) < HISTORY_CACHE_TTL:
+        return cached_data
+
+    try:
+        ticker = yf.Ticker(f"{from_currency}{to_currency}=X")
+        hist = ticker.history(period=yf_period, interval=yf_interval)
+        if hist.empty:
+            raise ValueError(
+                f"No historical data for {from_currency}/{to_currency} period={period}"
+            )
+    except ValueError:
+        raise
+    except Exception as exc:
+        raise ValueError(
+            f"Could not fetch historical rates for {from_currency}/{to_currency}: {exc}"
+        )
+
+    data = []
+    for ts, row in hist.iterrows():
+        rate = float(row["Close"])
+        if rate > 0:
+            data.append({"date": ts.isoformat(), "rate": rate})
+
+    _history_cache[key] = (data, now)
+    return data

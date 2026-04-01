@@ -17,17 +17,12 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <select 
-              v-model="chartPair" 
+            <select
+              v-model="chartPair"
               @change="updateChartPair"
               class="px-4 py-2 bg-bg-primary border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:border-primary"
             >
-              <option value="EUR/USD">EUR/USD</option>
-              <option value="GBP/USD">GBP/USD</option>
-              <option value="USD/JPY">USD/JPY</option>
-              <option value="AUD/USD">AUD/USD</option>
-              <option value="USD/CAD">USD/CAD</option>
-              <option value="NZD/USD">NZD/USD</option>
+              <option v-for="pair in tradingPairs" :key="pair" :value="pair">{{ pair }}</option>
             </select>
           </div>
         </div>
@@ -268,12 +263,51 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { tradeApi } from '@/services/api'
+import { tradeApi, forexApi } from '@/services/api'
 import { usePortfolioStore } from '@/stores/portfolio'
 import { createChart } from 'lightweight-charts'
 
 const route = useRoute()
 const portfolioStore = usePortfolioStore()
+
+// ── Currencies ───────────────────────────────────────────────────────────
+const currencies = ref([])  // [{code, name}, ...]
+
+// Generate all valid trading pairs from the currencies list
+const tradingPairs = computed(() => {
+  const pairs = []
+  const codes = currencies.value.map(c => c.code)
+  // Standard convention: major base currencies paired against quote currencies
+  const majorBases = ['EUR', 'GBP', 'AUD', 'NZD', 'USD']
+  for (const base of codes) {
+    for (const quote of codes) {
+      if (base === quote) continue
+      // Avoid duplicates — use market convention ordering
+      const baseIdx = majorBases.indexOf(base)
+      const quoteIdx = majorBases.indexOf(quote)
+      if (baseIdx >= 0 && quoteIdx >= 0 && baseIdx > quoteIdx) continue
+      pairs.push(`${base}/${quote}`)
+    }
+  }
+  return pairs
+})
+
+async function fetchCurrencies() {
+  try {
+    const { data } = await forexApi.getCurrencies()
+    currencies.value = data.currencies
+  } catch {
+    // Fallback to minimal set if endpoint fails
+    currencies.value = [
+      { code: 'USD', name: 'US Dollar' },
+      { code: 'EUR', name: 'Euro' },
+      { code: 'GBP', name: 'British Pound' },
+      { code: 'JPY', name: 'Japanese Yen' },
+      { code: 'AUD', name: 'Australian Dollar' },
+      { code: 'CAD', name: 'Canadian Dollar' },
+    ]
+  }
+}
 
 // ── Chart ─────────────────────────────────────────────────────────────────
 const chartContainer = ref(null)
@@ -521,6 +555,7 @@ function syncCurrenciesFromChart() {
 
 // Initialize chart and watches on mount
 onMounted(async () => {
+  await fetchCurrencies()
   await initChart()
   await portfolioStore.fetchHoldings()
   loadHistory()

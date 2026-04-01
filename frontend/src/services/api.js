@@ -36,6 +36,7 @@ export const authApi = {
 
 export const portfolioApi = {
   getHoldings: ()                       => apiClient.get('/portfolio/'),
+  getHistory:  (period = '1mo')         => apiClient.get('/portfolio/history', { params: { period } }),
   deposit:     (currency, amount)       => apiClient.post('/portfolio/deposit',  { currency, amount }),
   withdraw:    (currency, amount)       => apiClient.post('/portfolio/withdraw', { currency, amount }),
 }
@@ -51,8 +52,9 @@ export const tradeApi = {
 }
 
 export const forexApi = {
-  getRate:  (from, to) => apiClient.get(`/forex/rate/${from}/${to}`),
-  getRates: (pairs)    => apiClient.get('/forex/rates', pairs ? { params: { pairs } } : {}),
+  getRate:       (from, to) => apiClient.get(`/forex/rate/${from}/${to}`),
+  getRates:      (pairs)    => apiClient.get('/forex/rates', pairs ? { params: { pairs } } : {}),
+  getCurrencies: ()         => apiClient.get('/forex/currencies'),
 }
 
 export const preferencesApi = {

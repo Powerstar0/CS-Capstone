@@ -7,6 +7,12 @@ export const usePortfolioStore = defineStore('portfolio', () => {
   const loading  = ref(false)
   const error    = ref(null)
 
+  // History state
+  const historyData    = ref(null)   // { period, interval, data_points, currency }
+  const historyLoading = ref(false)
+  const historyError   = ref(null)
+  const selectedPeriod = ref('1mo')
+
   async function fetchHoldings() {
     loading.value = true
     error.value   = null
@@ -20,6 +26,20 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     }
   }
 
+  async function fetchHistory(period = '1mo') {
+    historyLoading.value = true
+    historyError.value   = null
+    selectedPeriod.value = period
+    try {
+      const { data } = await portfolioApi.getHistory(period)
+      historyData.value = data
+    } catch (e) {
+      historyError.value = e.response?.data?.detail || 'Failed to load history.'
+    } finally {
+      historyLoading.value = false
+    }
+  }
+
   async function deposit(currency, amount) {
     await portfolioApi.deposit(currency, amount)
     await fetchHoldings()
@@ -30,5 +50,9 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     await fetchHoldings()
   }
 
-  return { holdings, loading, error, fetchHoldings, deposit, withdraw }
+  return {
+    holdings, loading, error,
+    historyData, historyLoading, historyError, selectedPeriod,
+    fetchHoldings, fetchHistory, deposit, withdraw,
+  }
 })
