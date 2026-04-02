@@ -22,7 +22,7 @@ _PROVIDER_URLS = {
 
 _DEFAULT_MODELS = {
     "openai": "gpt-4o-mini",
-    "gemini": "gemini-2.0-flash",
+    "gemini": "gemini-3.1-flash-lite-preview",
 }
 
 
