@@ -63,6 +63,20 @@ class ExchangeResponse(BaseModel):
     timestamp: datetime
 
 
+# --- Portfolio History ---
+
+class HistoricalDataPoint(BaseModel):
+    date: str
+    value: float
+
+
+class HistoricalPortfolioResponse(BaseModel):
+    period: str
+    interval: str
+    data_points: list[HistoricalDataPoint]
+    currency: str  # always "USD"
+
+
 # --- Forex ---
 
 class RateResponse(BaseModel):
