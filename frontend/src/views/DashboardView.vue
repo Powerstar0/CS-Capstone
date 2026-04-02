@@ -228,9 +228,7 @@
                   <div>
                     <label class="text-sm text-gray-400 mb-1 block">Currency</label>
                     <select v-model="depositCurrency" class="w-full px-4 py-3 bg-bg-primary border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary">
-                      <option value="USD">USD — US Dollar</option>
-                      <option value="AUD">AUD — Australian Dollar</option>
-                      <option value="CAD">CAD — Canadian Dollar</option>
+                      <option v-for="c in currencies" :key="c.code" :value="c.code">{{ c.code }} — {{ c.name }}</option>
                     </select>
                   </div>
                   <div>
@@ -267,9 +265,7 @@
                   <div>
                     <label class="text-sm text-gray-400 mb-1 block">Currency</label>
                     <select v-model="withdrawCurrency" class="w-full px-4 py-3 bg-bg-primary border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary">
-                      <option value="USD">USD — US Dollar</option>
-                      <option value="AUD">AUD — Australian Dollar</option>
-                      <option value="CAD">CAD — Canadian Dollar</option>
+                      <option v-for="c in currencies" :key="c.code" :value="c.code">{{ c.code }} — {{ c.name }}</option>
                     </select>
                   </div>
                   <div>
@@ -298,7 +294,22 @@
           </Teleport>
 
           <div class="bg-bg-primary rounded-lg p-4 flex-1 flex flex-col overflow-hidden" style="min-height: 350px; max-height: 350px;">
-            <div v-if="portfolioStore.loading" class="flex items-center justify-center h-full">
+            <!-- Date Range Selector -->
+            <div class="flex gap-1.5 mb-3 flex-shrink-0">
+              <button
+                v-for="p in periods"
+                :key="p.value"
+                @click="selectPeriod(p.value)"
+                :class="[
+                  'px-3 py-1 rounded text-xs font-bold transition-all',
+                  portfolioStore.selectedPeriod === p.value
+                    ? 'bg-primary text-black'
+                    : 'bg-bg-secondary text-gray-400 hover:text-white hover:bg-bg-secondary/80'
+                ]"
+              >{{ p.label }}</button>
+            </div>
+
+            <div v-if="portfolioStore.loading && !portfolioStore.historyData" class="flex items-center justify-center h-full">
               <div class="h-48 w-full bg-bg-secondary rounded-lg animate-pulse"></div>
             </div>
             <div v-else-if="portfolioStore.error" class="flex items-center justify-center h-full text-red-400 text-sm">
@@ -307,7 +318,15 @@
             <div v-else-if="portfolioStore.holdings.length === 0" class="flex items-center justify-center h-full text-gray-500 text-sm">
               No holdings yet. Deposit funds to get started.
             </div>
-            <div v-else class="flex flex-col justify-center items-center h-full w-full" style="padding-right: 1rem;">
+            <div v-else class="relative flex flex-col justify-center items-center h-full w-full" style="padding-right: 1rem;">
+              <!-- Loading overlay -->
+              <div v-if="portfolioStore.historyLoading" class="absolute inset-0 flex items-center justify-center bg-bg-primary/60 z-10 rounded-lg">
+                <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+              </div>
+              <!-- History error -->
+              <div v-if="portfolioStore.historyError" class="absolute top-0 left-0 right-0 text-center text-red-400 text-xs py-1">
+                {{ portfolioStore.historyError }}
+              </div>
               <!-- Portfolio Line Chart -->
               <div class="w-full h-full flex items-center justify-center">
                 <Line :data="portfolioLineChartData" :options="portfolioLineChartOptions" />
@@ -434,6 +453,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePortfolioStore } from '@/stores/portfolio'
+import { forexApi } from '@/services/api'
 import { Line } from 'vue-chartjs'
 import {
   Chart as ChartJS,
@@ -462,8 +482,42 @@ ChartJS.register(
 const router = useRouter()
 const portfolioStore = usePortfolioStore()
 
+// ── Currencies ───────────────────────────────────────────────────────────
+const currencies = ref([])
+
+async function fetchCurrencies() {
+  try {
+    const { data } = await forexApi.getCurrencies()
+    currencies.value = data.currencies
+  } catch {
+    currencies.value = [
+      { code: 'USD', name: 'US Dollar' },
+      { code: 'EUR', name: 'Euro' },
+      { code: 'GBP', name: 'British Pound' },
+    ]
+  }
+}
+
+// Date range periods for the chart selector
+const periods = [
+  { label: '1D', value: '1d' },
+  { label: '1W', value: '1wk' },
+  { label: '1M', value: '1mo' },
+  { label: '3M', value: '3mo' },
+  { label: '6M', value: '6mo' },
+  { label: '1Y', value: '1y' },
+  { label: '3Y', value: '3y' },
+  { label: '5Y', value: '5y' },
+]
+
+function selectPeriod(period) {
+  portfolioStore.fetchHistory(period)
+}
+
 onMounted(() => {
+  fetchCurrencies()
   portfolioStore.fetchHoldings()
+  portfolioStore.fetchHistory('1mo')
 })
 
 // Navigation function
@@ -471,29 +525,41 @@ const goToTrading = (symbol) => {
   router.push({ path: '/trading', query: { pair: symbol } })
 }
 
-// Portfolio Line Chart Data - Synced with actual holdings
+// Format date labels based on the selected period
+function formatDateLabel(dateStr, period) {
+  const d = new Date(dateStr)
+  switch (period) {
+    case '1d':
+      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    case '1wk':
+      return d.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' +
+        d.toLocaleTimeString('en-US', { hour: 'numeric' })
+    case '1mo':
+    case '3mo':
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    case '6mo':
+    case '1y':
+      return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+    case '3y':
+    case '5y':
+      return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+    default:
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+}
+
+// Portfolio Line Chart Data - from real yfinance historical rates
 const portfolioLineChartData = computed(() => {
-  // Calculate current total portfolio value from holdings
-  const currentValue = portfolioStore.holdings.reduce((sum, holding) => {
-    return sum + Number(holding.amount)
-  }, 0)
-  
-  // If no holdings, show empty state
-  if (currentValue === 0 || portfolioStore.holdings.length === 0) {
-    const labels = []
-    const data = []
-    for (let i = 30; i >= 0; i--) {
-      const date = new Date()
-      date.setDate(date.getDate() - i)
-      labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
-      data.push(0)
-    }
-    
+  const history = portfolioStore.historyData
+  const period = portfolioStore.selectedPeriod
+
+  // Empty / loading state
+  if (!history || !history.data_points || history.data_points.length === 0) {
     return {
-      labels,
+      labels: [],
       datasets: [{
-        label: 'Portfolio Value',
-        data,
+        label: 'Portfolio Value (USD)',
+        data: [],
         borderColor: 'rgba(255, 215, 0, 0.3)',
         backgroundColor: 'rgba(255, 215, 0, 0.05)',
         borderWidth: 2,
@@ -503,39 +569,14 @@ const portfolioLineChartData = computed(() => {
       }]
     }
   }
-  
-  // Generate 30 days of portfolio performance data based on current value
-  const days = 30
-  const labels = []
-  const data = []
-  
-  // Calculate base value (30 days ago) - assume 5% growth over 30 days
-  const baseValue = currentValue / 1.05
-  
-  for (let i = days; i >= 0; i--) {
-    const date = new Date()
-    date.setDate(date.getDate() - i)
-    labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
-    
-    // Generate realistic growth curve from base to current value
-    const progress = (days - i) / days
-    const growthTrend = baseValue + (currentValue - baseValue) * progress
-    
-    // Add realistic daily volatility (±2% of current trend value)
-    const volatility = growthTrend * 0.02 * (Math.random() - 0.5)
-    
-    // Ensure the last data point is exactly the current value
-    if (i === 0) {
-      data.push(currentValue)
-    } else {
-      data.push(Math.max(0, growthTrend + volatility))
-    }
-  }
-  
+
+  const labels = history.data_points.map(dp => formatDateLabel(dp.date, period))
+  const data = history.data_points.map(dp => dp.value)
+
   return {
     labels,
     datasets: [{
-      label: 'Portfolio Value',
+      label: 'Portfolio Value (USD)',
       data,
       borderColor: 'rgba(255, 215, 0, 1)',
       backgroundColor: 'rgba(255, 215, 0, 0.1)',
@@ -609,23 +650,27 @@ const portfolioLineChartOptions = {
   }
 }
 
-// Template data for portfolio value - Synced with actual holdings
+// Portfolio value from the latest history data point (in USD)
 const totalPortfolioValue = computed(() => {
-  if (!portfolioStore.holdings || portfolioStore.holdings.length === 0) return 0
-  return portfolioStore.holdings.reduce((sum, holding) => sum + Number(holding.amount), 0)
+  const history = portfolioStore.historyData
+  if (!history || !history.data_points || history.data_points.length === 0) {
+    // Fallback to raw sum of holdings
+    if (!portfolioStore.holdings || portfolioStore.holdings.length === 0) return 0
+    return portfolioStore.holdings.reduce((sum, holding) => sum + Number(holding.amount), 0)
+  }
+  return history.data_points[history.data_points.length - 1].value
 })
 
-// Calculate 24h change based on chart data (comparing today vs yesterday)
+// Calculate change over the selected period (first vs last data point)
 const portfolioChange = computed(() => {
-  if (!portfolioLineChartData.value.datasets[0].data.length) return 0
-  
-  const data = portfolioLineChartData.value.datasets[0].data
-  const currentValue = data[data.length - 1]
-  const previousValue = data[data.length - 2]
-  
-  if (!previousValue || previousValue === 0) return 0
-  
-  return ((currentValue - previousValue) / previousValue) * 100
+  const history = portfolioStore.historyData
+  if (!history || !history.data_points || history.data_points.length < 2) return 0
+
+  const firstValue = history.data_points[0].value
+  const lastValue = history.data_points[history.data_points.length - 1].value
+
+  if (!firstValue || firstValue === 0) return 0
+  return ((lastValue - firstValue) / firstValue) * 100
 })
 
 // Wishlist template data - Forex pairs

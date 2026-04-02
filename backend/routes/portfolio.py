@@ -1,8 +1,12 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Depends
-from models import DepositRequest, WithdrawRequest, PortfolioHolding
+from fastapi import APIRouter, HTTPException, Depends, Query
+from models import (
+    DepositRequest, WithdrawRequest, PortfolioHolding,
+    HistoricalPortfolioResponse, HistoricalDataPoint,
+)
 from database import get_supabase_admin
 from auth import get_current_user
+from forex_service import get_historical_rates, PERIOD_MAP
 
 router = APIRouter()
 
@@ -32,6 +36,114 @@ async def get_portfolio(current=Depends(get_current_user)):
             amount=float(row["amount"] or 0),
         ))
     return holdings
+
+
+@router.get("/history", response_model=HistoricalPortfolioResponse)
+async def get_portfolio_history(
+    period: str = Query("1mo", description="Time period: 1d, 1wk, 1mo, 3mo, 6mo, 1y, 3y, 5y"),
+    current=Depends(get_current_user),
+):
+    """Return historical portfolio value in USD for the given time period."""
+    if period not in PERIOD_MAP:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid period '{period}'. Must be one of {list(PERIOD_MAP)}",
+        )
+
+    user_id = current["user"].id
+    admin = get_supabase_admin()
+
+    # Fetch current holdings
+    try:
+        response = admin.table("portfolio").select("*").eq("id", user_id).execute()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    holdings = []
+    for row in response.data:
+        amt = float(row["amount"] or 0)
+        if amt > 0:
+            holdings.append({"currency": row["currency-ticker-symbol"], "amount": amt})
+
+    if not holdings:
+        return HistoricalPortfolioResponse(
+            period=period,
+            interval=PERIOD_MAP[period][1],
+            data_points=[],
+            currency="USD",
+        )
+
+    yf_period, yf_interval = PERIOD_MAP[period]
+
+    # Fetch historical rates for each non-USD currency -> USD
+    rate_series: dict[str, dict[str, float]] = {}  # currency -> {date -> rate}
+    reference_dates: list[str] | None = None
+
+    for h in holdings:
+        ccy = h["currency"].upper()
+        if ccy == "USD":
+            continue
+        try:
+            data = get_historical_rates(ccy, "USD", period)
+        except ValueError:
+            # If we can't get rates for this currency, skip it
+            continue
+
+        date_rate_map = {pt["date"]: pt["rate"] for pt in data}
+        rate_series[ccy] = date_rate_map
+
+        # Use first non-USD currency's dates as reference
+        if reference_dates is None:
+            reference_dates = [pt["date"] for pt in data]
+
+    # If all holdings are USD or no rate data returned, build a flat line
+    usd_amount = sum(h["amount"] for h in holdings if h["currency"].upper() == "USD")
+    if reference_dates is None:
+        # All USD — generate synthetic date axis
+        from datetime import timedelta
+        now = datetime.now(timezone.utc)
+        # Simple: return a single data point at current value
+        return HistoricalPortfolioResponse(
+            period=period,
+            interval=yf_interval,
+            data_points=[HistoricalDataPoint(date=now.isoformat(), value=round(usd_amount, 2))],
+            currency="USD",
+        )
+
+    # Build portfolio value at each date using forward-fill
+    data_points: list[HistoricalDataPoint] = []
+    last_known: dict[str, float] = {}  # currency -> last known rate
+
+    for date_str in reference_dates:
+        total = usd_amount  # USD holdings always contribute at 1:1
+
+        for h in holdings:
+            ccy = h["currency"].upper()
+            if ccy == "USD":
+                continue
+
+            series = rate_series.get(ccy)
+            if series is None:
+                continue
+
+            # Use rate for this date, or forward-fill from last known
+            rate = series.get(date_str)
+            if rate is not None:
+                last_known[ccy] = rate
+            else:
+                rate = last_known.get(ccy)
+
+            if rate is not None:
+                total += h["amount"] * rate
+
+        data_points.append(HistoricalDataPoint(date=date_str, value=round(total, 2)))
+
+    return HistoricalPortfolioResponse(
+        period=period,
+        interval=yf_interval,
+        data_points=data_points,
+        currency="USD",
+    )
 
 
 @router.post("/deposit", response_model=PortfolioHolding)

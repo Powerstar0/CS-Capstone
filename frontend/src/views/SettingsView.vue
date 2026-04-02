@@ -70,10 +70,7 @@
           <div class="setting-group">
             <label class="setting-label">Default Currency</label>
             <select class="setting-input">
-              <option value="USD">USD - US Dollar</option>
-              <option value="EUR">EUR - Euro</option>
-              <option value="GBP">GBP - British Pound</option>
-              <option value="JPY">JPY - Japanese Yen</option>
+              <option v-for="c in currencies" :key="c.code" :value="c.code">{{ c.code }} - {{ c.name }}</option>
             </select>
           </div>
 
@@ -254,10 +251,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { preferencesApi } from '@/services/api'
+import { preferencesApi, forexApi } from '@/services/api'
 
 const activeTab = ref('profile')
 const isAdmin = ref(false)
+const currencies = ref([])
 
 onMounted(async () => {
   try {
@@ -265,6 +263,17 @@ onMounted(async () => {
     isAdmin.value = !!data.is_admin
   } catch {
     // preferences may not have is_admin yet
+  }
+  try {
+    const { data } = await forexApi.getCurrencies()
+    currencies.value = data.currencies
+  } catch {
+    currencies.value = [
+      { code: 'USD', name: 'US Dollar' },
+      { code: 'EUR', name: 'Euro' },
+      { code: 'GBP', name: 'British Pound' },
+      { code: 'JPY', name: 'Japanese Yen' },
+    ]
   }
 })
 

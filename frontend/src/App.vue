@@ -221,7 +221,7 @@ onUnmounted(() => clearInterval(tickerInterval))
           </div>
 
           <!-- Center: Currency Ticker with 3D Curved Perspective (stays fixed behind) -->
-          <div v-if="showTicker" class="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 flex items-center overflow-hidden perspective-container ticker-responsive" style="max-width: 60%; min-width: 300px;">
+          <div v-if="showTicker" class="absolute left-[47.5%] -translate-x-1/2 top-0 bottom-0 flex items-center overflow-hidden perspective-container ticker-responsive" style="max-width: 37%; min-width: 300px;">
             <div class="ticker-scroll-container">
               <div class="ticker-scroll">
                 <span 
